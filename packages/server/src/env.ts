@@ -11,11 +11,15 @@ const envSchema = z
   .object({
     DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
     ANTHROPIC_API_KEY: z.string().optional().default(""),
-    ANTHROPIC_BASE_URL: z
-      .string()
-      .url("ANTHROPIC_BASE_URL must be a valid URL")
-      .optional()
-      .default(DEFAULT_ANTHROPIC_BASE_URL),
+    ANTHROPIC_BASE_URL: z.preprocess(
+      (value) =>
+        typeof value === "string" && value.trim().length === 0 ? undefined : value,
+      z
+        .string()
+        .url("ANTHROPIC_BASE_URL must be a valid URL")
+        .optional()
+        .default(DEFAULT_ANTHROPIC_BASE_URL)
+    ),
     BRAVE_SEARCH_API_KEY: z.string().optional().default(""),
     WEB_PORT: z.coerce.number().default(3000),
     WEB_AUTH_PASSWORD: z.string().optional().default(""),
