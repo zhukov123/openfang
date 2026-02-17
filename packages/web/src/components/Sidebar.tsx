@@ -5,6 +5,7 @@ import {
   Settings,
   History,
   Brain,
+  Clock,
   Zap,
 } from "lucide-react";
 
@@ -12,6 +13,7 @@ const links = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/chat", icon: MessageSquare, label: "Chat" },
   { to: "/history", icon: History, label: "History" },
+  { to: "/schedules", icon: Clock, label: "Schedules" },
   { to: "/memories", icon: Brain, label: "Memories" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

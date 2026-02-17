@@ -44,11 +44,16 @@ export async function createServer() {
   registerScheduleRoutes(app);
 
   // Serve static web UI (built React app)
-  const webDistPath = resolve(
-    import.meta.dirname ?? ".",
-    "../../web/dist"
-  );
-  if (existsSync(webDistPath)) {
+  // Try multiple possible locations for the web dist
+  const possiblePaths = [
+    resolve(import.meta.dirname ?? ".", "../../../web/dist"),  // from src/api/
+    resolve(import.meta.dirname ?? ".", "../../web/dist"),     // from dist/
+    resolve(process.cwd(), "../web/dist"),                     // from packages/server/
+    resolve(process.cwd(), "packages/web/dist"),               // from root
+  ];
+  const webDistPath = possiblePaths.find((p) => existsSync(p));
+  if (webDistPath) {
+    console.log(`[OpenFang] Serving web UI from ${webDistPath}`);
     await app.register(fastifyStatic, {
       root: webDistPath,
       prefix: "/",

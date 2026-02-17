@@ -75,6 +75,16 @@ export function streamChat(
     signal: controller.signal,
   })
     .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text();
+        onEvent({
+          event: "error",
+          data: {
+            message: `Server error ${res.status}: ${text.slice(0, 200) || res.statusText}`,
+          },
+        });
+        return;
+      }
       const reader = res.body?.getReader();
       if (!reader) return;
 

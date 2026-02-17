@@ -1,5 +1,11 @@
 import { z } from "zod";
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve } from "path";
+
+// Load .env from workspace root (two levels up from packages/server)
+dotenv.config({ path: resolve(import.meta.dirname ?? ".", "../../.env") });
+dotenv.config({ path: resolve(import.meta.dirname ?? ".", "../../../.env") });
+dotenv.config(); // also try cwd
 
 const envSchema = z.object({
   DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),

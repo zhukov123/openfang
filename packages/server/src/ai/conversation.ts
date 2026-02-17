@@ -57,10 +57,30 @@ export async function getConversationHistory(
     } else if (row.role === "assistant") {
       anthropicMessages.push({ role: "assistant", content: parsed });
     } else if (row.role === "tool_use") {
-      // Tool use is part of an assistant message -- handled via content blocks
       anthropicMessages.push({ role: "assistant", content: parsed });
     } else if (row.role === "tool_result") {
-      anthropicMessages.push({ role: "user", content: parsed });
+      // Only add tool_result if it immediately follows an assistant message AND every
+      // tool_use_id in the result blocks exists in that assistant message (API requirement)
+      const last = anthropicMessages[anthropicMessages.length - 1];
+      if (last?.role !== "assistant" || !Array.isArray(last.content)) {
+        continue;
+      }
+      const lastBlocks = last.content as Anthropic.ContentBlock[];
+      const prevToolUseIds = new Set(
+        lastBlocks
+          .filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")
+          .map((b) => b.id)
+      );
+      if (prevToolUseIds.size === 0) continue;
+
+      const resultBlocks = Array.isArray(parsed) ? parsed : [parsed];
+      const allIdsMatch = resultBlocks.every(
+        (b: { tool_use_id?: string }) =>
+          b.tool_use_id && prevToolUseIds.has(b.tool_use_id)
+      );
+      if (allIdsMatch) {
+        anthropicMessages.push({ role: "user", content: parsed });
+      }
     }
   }
 

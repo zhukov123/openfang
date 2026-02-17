@@ -38,52 +38,63 @@ interface BraveSearchResult {
 export async function webSearchExecute(
   input: Record<string, unknown>
 ): Promise<string> {
-  const apiKey = env.BRAVE_SEARCH_API_KEY;
-  if (!apiKey) {
-    return JSON.stringify({
-      error: "BRAVE_SEARCH_API_KEY not configured. Set it in .env or web UI settings.",
-    });
-  }
-
-  const query = input.query as string;
-  const count = Math.min((input.count as number) || 5, 20);
-  const freshness = input.freshness as string | undefined;
-  const country = input.country as string | undefined;
-
-  const params = new URLSearchParams({
-    q: query,
-    count: String(count),
-  });
-
-  if (freshness) params.set("freshness", freshness);
-  if (country) params.set("country", country);
-
-  const response = await fetch(
-    `https://api.search.brave.com/res/v1/web/search?${params}`,
-    {
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip",
-        "X-Subscription-Token": apiKey,
-      },
+  try {
+    const apiKey = env.BRAVE_SEARCH_API_KEY;
+    if (!apiKey) {
+      return JSON.stringify({
+        error: "BRAVE_SEARCH_API_KEY not configured. Set it in .env or web UI settings.",
+      });
     }
-  );
 
-  if (!response.ok) {
+    const query = input.query as string;
+    const count = Math.min((input.count as number) || 5, 20);
+    const freshness = input.freshness as string | undefined;
+    const country = input.country as string | undefined;
+
+    const params = new URLSearchParams({
+      q: query,
+      count: String(count),
+    });
+
+    if (freshness) params.set("freshness", freshness);
+    if (country) params.set("country", country);
+
+    const response = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?${params}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Accept-Encoding": "gzip",
+          "X-Subscription-Token": apiKey,
+        },
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+
+    if (!response.ok) {
+      const body = await response.text();
+      return JSON.stringify({
+        error: `Brave Search API error: ${response.status} ${response.statusText}`,
+        details: body.slice(0, 200),
+      });
+    }
+
+    const data = (await response.json()) as {
+      web?: { results?: Array<{ title: string; url: string; description: string; age?: string }> };
+    };
+    const results: BraveSearchResult[] = (data.web?.results ?? []).map((r) => ({
+      title: r.title,
+      url: r.url,
+      description: r.description,
+      age: r.age,
+    }));
+
+    return JSON.stringify(results, null, 2);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return JSON.stringify({
-      error: `Brave Search API error: ${response.status} ${response.statusText}`,
+      error: "Web search failed",
+      details: message,
     });
   }
-
-  const data = (await response.json()) as {
-    web?: { results?: Array<{ title: string; url: string; description: string; age?: string }> };
-  };
-  const results: BraveSearchResult[] = (data.web?.results ?? []).map((r) => ({
-    title: r.title,
-    url: r.url,
-    description: r.description,
-    age: r.age,
-  }));
-
-  return JSON.stringify(results, null, 2);
 }

@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { streamChat, type ChatStreamEvent } from "../lib/api";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { api, streamChat, type ChatStreamEvent } from "../lib/api";
 import {
   Send,
   Loader2,
@@ -37,15 +37,19 @@ interface TokenUsage {
 
 export default function Chat() {
   const { conversationId: urlConvoId } = useParams();
+  const navigate = useNavigate();
+
+  // Restore conversation ID from URL, sessionStorage, or null
+  const restoredId = urlConvoId ?? sessionStorage.getItem("openfang_chat_convo") ?? null;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(
-    urlConvoId ?? null
-  );
+  const [conversationId, setConversationId] = useState<string | null>(restoredId);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ input: 0, output: 0 });
   const [debugOpen, setDebugOpen] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [extractedMemories, setExtractedMemories] = useState<
     Array<{ content: string; category: string }>
   >([]);
@@ -53,6 +57,71 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Persist conversation ID to sessionStorage whenever it changes
+  useEffect(() => {
+    if (conversationId) {
+      sessionStorage.setItem("openfang_chat_convo", conversationId);
+    } else {
+      sessionStorage.removeItem("openfang_chat_convo");
+    }
+  }, [conversationId]);
+
+  // Load existing conversation messages on mount or when conversationId changes from URL
+  const loadConversation = useCallback(async (convoId: string) => {
+    setLoadingHistory(true);
+    try {
+      const data = await api.getMessages(convoId);
+      if (!data?.messages || !Array.isArray(data.messages)) {
+        // Conversation not found or bad response -- start fresh
+        setConversationId(null);
+        sessionStorage.removeItem("openfang_chat_convo");
+        return;
+      }
+      const loaded: ChatMessage[] = [];
+      for (const msg of data.messages) {
+        if (msg.role === "user") {
+          const content = typeof msg.content === "string"
+            ? msg.content
+            : JSON.stringify(msg.content);
+          loaded.push({ id: msg.id, role: "user", content });
+        } else if (msg.role === "assistant") {
+          let text = "";
+          if (typeof msg.content === "string") {
+            text = msg.content;
+          } else if (Array.isArray(msg.content)) {
+            for (const block of msg.content as Array<{ type: string; text?: string }>) {
+              if (block.type === "text" && block.text) {
+                text += block.text;
+              }
+            }
+          } else {
+            text = JSON.stringify(msg.content);
+          }
+          if (text) {
+            loaded.push({ id: msg.id, role: "assistant", content: text });
+          }
+        }
+      }
+      setMessages(loaded);
+    } catch (err) {
+      console.error("Failed to load conversation:", err);
+      // Clear stale ID
+      setConversationId(null);
+      sessionStorage.removeItem("openfang_chat_convo");
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  // Load conversation on mount if we have a restored ID
+  const hasLoadedRef = useRef(false);
+  useEffect(() => {
+    if (restoredId && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadConversation(restoredId);
+    }
+  }, [restoredId, loadConversation]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -148,7 +217,12 @@ export default function Chat() {
             break;
 
           case "error":
-            assistantContent += `\n\nError: ${event.data.message}`;
+            const errMsg = event.data.message as string;
+            const friendlyMsg =
+              errMsg === "Failed to fetch"
+                ? "Connection lost. The server may have restarted or the request timed out. Try again."
+                : errMsg;
+            assistantContent += `\n\nError: ${friendlyMsg}`;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -176,6 +250,8 @@ export default function Chat() {
     setToolCalls([]);
     setTokenUsage({ input: 0, output: 0 });
     setExtractedMemories([]);
+    sessionStorage.removeItem("openfang_chat_convo");
+    navigate("/chat", { replace: true });
     inputRef.current?.focus();
   };
 
@@ -216,7 +292,14 @@ export default function Chat() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {messages.length === 0 && (
+          {loadingHistory && (
+            <div className="flex items-center justify-center h-full text-zinc-500">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Loading conversation...
+            </div>
+          )}
+
+          {!loadingHistory && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-zinc-500">
               <p className="text-lg font-medium mb-2">Start a conversation</p>
               <p className="text-sm">

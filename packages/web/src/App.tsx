@@ -5,6 +5,7 @@ import Chat from "./pages/Chat";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
 import Memories from "./pages/Memories";
+import Schedules from "./pages/Schedules";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/history" element={<History />} />
           <Route path="/memories" element={<Memories />} />
+          <Route path="/schedules" element={<Schedules />} />
         </Routes>
       </main>
     </div>
