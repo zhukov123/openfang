@@ -1,0 +1,20 @@
+{
+  "name": "openfang",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted AI assistant with Discord integration and web UI",
+  "scripts": {
+    "dev": "pnpm --filter @openfang/server dev",
+    "dev:web": "pnpm --filter @openfang/web dev",
+    "build": "pnpm --filter @openfang/web build && pnpm --filter @openfang/server build",
+    "start": "pnpm --filter @openfang/server start",
+    "db:generate": "pnpm --filter @openfang/server db:generate",
+    "db:migrate": "pnpm --filter @openfang/server db:migrate"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}

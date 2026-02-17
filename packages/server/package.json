@@ -1,0 +1,38 @@
+{
+  "name": "@openfang/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "@mozilla/readability": "latest",
+    "better-sqlite3": "latest",
+    "cheerio": "latest",
+    "cron-parser": "latest",
+    "discord.js": "latest",
+    "dotenv": "latest",
+    "drizzle-orm": "latest",
+    "fastify": "latest",
+    "@fastify/cors": "latest",
+    "@fastify/static": "latest",
+    "jsdom": "latest",
+    "mathjs": "latest",
+    "nanoid": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "latest",
+    "@types/jsdom": "latest",
+    "drizzle-kit": "latest",
+    "tsup": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
