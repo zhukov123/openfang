@@ -78,7 +78,7 @@ export default function Settings() {
             placeholder="claude-sonnet-4-20250514"
           />
           <p className="text-xs text-zinc-500 mt-1">
-            Anthropic model identifier
+            Anthropic-compatible model identifier
           </p>
         </Section>
 
