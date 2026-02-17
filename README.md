@@ -19,7 +19,9 @@ A simplified, single-user alternative to OpenClaw -- one process, one SQLite fil
 - Node.js >= 22
 - pnpm (`npm i -g pnpm`)
 - A Discord bot token ([Developer Portal](https://discord.com/developers/applications))
-- An Anthropic API key ([console.anthropic.com](https://console.anthropic.com/))
+- One of:
+  - An Anthropic API key ([console.anthropic.com](https://console.anthropic.com/))
+  - An Anthropic-compatible gateway endpoint (for example, an OpenClaw-style relay)
 - (Optional) Brave Search API key ([brave.com/search/api](https://brave.com/search/api/))
 
 ## Quick Start
@@ -69,11 +71,22 @@ Open http://localhost:3000 to access the web UI.
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DISCORD_TOKEN` | Yes | Discord bot token |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key |
+| `ANTHROPIC_API_KEY` | Conditional | Required for official Anthropic endpoint, optional for custom gateways |
+| `ANTHROPIC_BASE_URL` | No | Anthropic-compatible API base URL (default: `https://api.anthropic.com`) |
 | `BRAVE_SEARCH_API_KEY` | No | Brave Search API key (for web search) |
 | `WEB_PORT` | No | Web UI port (default: 3000) |
 | `WEB_AUTH_PASSWORD` | No | Password for web UI API (Bearer token) |
 | `DATABASE_URL` | No | SQLite path (default: ./data/openfang.db) |
+
+## Subscription plans vs API access (review)
+
+If your goal is to use a flat-rate "$20/month" consumer subscription (Claude Pro, ChatGPT Plus, Copilot) instead of pay-per-request API billing:
+
+- Those subscriptions are generally for first-party apps/websites, not direct API usage.
+- This project does not implement browser/session automation against consumer UIs.
+- OpenFang supports official Anthropic API access, plus custom Anthropic-compatible gateways via `ANTHROPIC_BASE_URL`.
+
+For OpenClaw-like setups, run a compatible relay/gateway and point `ANTHROPIC_BASE_URL` to it. Ensure your setup complies with the provider's terms and account policies.
 
 ## Web UI Development
 
@@ -102,7 +115,7 @@ pnpm start   # Runs compiled server (serves web UI as static files)
 Single Node.js process
 ├── Fastify API (REST + SSE)
 ├── Discord.js bot (DM handler)
-├── Anthropic Claude (tool-use loop)
+├── Anthropic-compatible LLM endpoint (tool-use loop)
 ├── Scheduler (cron + reminders)
 ├── Memory (auto-extraction + FTS5)
 └── SQLite (Drizzle ORM)
