@@ -1,30 +1,42 @@
 import { getAnthropicClient } from "../ai/anthropic.js";
-import { executeToolCall, getEnabledToolDefinitions } from "../ai/tools/index.js";
-import { getDb } from "../db/index.js";
-import { config } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { getOpenAIClient } from "../ai/openai.js";
+import { runOpenAIToolLoop } from "../ai/openai-tool-loop.js";
+import {
+  executeToolCall,
+  getEnabledOpenAIToolDefinitions,
+  getEnabledToolDefinitions,
+} from "../ai/tools/index.js";
+import { getAiProvider, getConfiguredModel, getSystemPrompt } from "../ai/config.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
-function getConfigValue(key: string): string | null {
-  const db = getDb();
-  const row = db.select().from(config).where(eq(config.key, key)).get();
-  return row ? JSON.parse(row.value) : null;
-}
-
 /**
- * Execute a scheduled prompt through Claude, with optional tool access.
+ * Execute a scheduled prompt through the configured model provider, with optional tool access.
  * Returns the final text response.
  */
 export async function executeScheduledPrompt(
   prompt: string,
   toolsEnabled: boolean
 ): Promise<string> {
-  const client = getAnthropicClient();
-  const model = getConfigValue("model") ?? "claude-sonnet-4-20250514";
-  const systemPrompt =
-    getConfigValue("system_prompt") ??
-    "You are OpenFang, a helpful personal AI assistant.";
+  const provider = getAiProvider();
+  const model = getConfiguredModel();
+  const systemPrompt = getSystemPrompt();
+  const scheduledSystemPrompt = `${systemPrompt}\n\nThis is a scheduled task running automatically. Provide a concise, useful response.`;
 
+  if (provider === "openai-codex") {
+    const client = getOpenAIClient();
+    const toolDefs = toolsEnabled ? getEnabledOpenAIToolDefinitions() : [];
+    const result = await runOpenAIToolLoop({
+      client,
+      model,
+      systemPrompt: scheduledSystemPrompt,
+      tools: toolDefs,
+      messages: [{ role: "user", content: prompt }],
+      maxIterations: 10,
+    });
+    return result.finalText;
+  }
+
+  const client = getAnthropicClient();
   const toolDefs = toolsEnabled ? getEnabledToolDefinitions() : [];
 
   let messages: Anthropic.MessageParam[] = [
@@ -38,7 +50,7 @@ export async function executeScheduledPrompt(
     const response = await client.messages.create({
       model,
       max_tokens: 4096,
-      system: `${systemPrompt}\n\nThis is a scheduled task running automatically. Provide a concise, useful response.`,
+      system: scheduledSystemPrompt,
       tools: toolDefs.length > 0 ? toolDefs : undefined,
       messages,
     });

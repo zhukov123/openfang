@@ -6,7 +6,7 @@ A simplified, single-user alternative to OpenClaw -- one process, one SQLite fil
 
 ## Features
 
-- **Discord DM bot** -- chat with Claude via Discord direct messages
+- **Discord DM bot** -- chat with your configured model via Discord direct messages
 - **Web chat UI** -- built-in chat interface with debug panel (tool calls, token usage, memory extractions)
 - **Web search** -- Brave Search API with deep page reading via Mozilla Readability
 - **Shell execution** -- run commands on your machine from Discord or web chat
@@ -19,9 +19,10 @@ A simplified, single-user alternative to OpenClaw -- one process, one SQLite fil
 - Node.js >= 22
 - pnpm (`npm i -g pnpm`)
 - A Discord bot token ([Developer Portal](https://discord.com/developers/applications))
-- One of:
-  - An Anthropic API key ([console.anthropic.com](https://console.anthropic.com/))
-  - An Anthropic-compatible gateway endpoint (for example, an OpenClaw-style relay)
+- A model auth method (choose one):
+  - Anthropic API key or Anthropic setup-token (`claude setup-token`)
+  - OpenAI API key
+  - OpenAI Codex auth (`codex login`) using the Codex auth file
 - (Optional) Brave Search API key ([brave.com/search/api](https://brave.com/search/api/))
 
 ## Quick Start
@@ -71,22 +72,49 @@ Open http://localhost:3000 to access the web UI.
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DISCORD_TOKEN` | Yes | Discord bot token |
-| `ANTHROPIC_API_KEY` | Conditional | Required for official Anthropic endpoint, optional for custom gateways |
+| `ANTHROPIC_API_KEY` | Conditional | Anthropic API key (official API mode) |
+| `ANTHROPIC_AUTH_TOKEN` | Conditional | Anthropic bearer token / Claude setup-token |
 | `ANTHROPIC_BASE_URL` | No | Anthropic-compatible API base URL (default: `https://api.anthropic.com`) |
+| `OPENAI_API_KEY` | Conditional | OpenAI API key (required when OpenAI auth mode is `api_key`) |
+| `OPENAI_BASE_URL` | No | OpenAI-compatible API base URL (default: `https://api.openai.com/v1`) |
+| `OPENAI_AUTH_MODE` | No | `api_key` or `codex` (default: `api_key`) |
+| `CODEX_AUTH_FILE` | No | Path to Codex auth JSON from `codex login` (default: `~/.codex/auth.json`) |
 | `BRAVE_SEARCH_API_KEY` | No | Brave Search API key (for web search) |
 | `WEB_PORT` | No | Web UI port (default: 3000) |
 | `WEB_AUTH_PASSWORD` | No | Password for web UI API (Bearer token) |
 | `DATABASE_URL` | No | SQLite path (default: ./data/openfang.db) |
 
+## Auth options (including subscription-style flows)
+
+OpenFang supports multiple auth paths:
+
+- **Anthropic API key** (`ANTHROPIC_API_KEY`)
+- **Anthropic setup-token / bearer token** (`ANTHROPIC_AUTH_TOKEN`)
+- **OpenAI API key** (`OPENAI_API_KEY` + `OPENAI_AUTH_MODE=api_key`)
+- **OpenAI Codex auth** (`OPENAI_AUTH_MODE=codex` + `CODEX_AUTH_FILE`)
+
+To use Codex auth:
+
+1. Run `codex login` on the host running OpenFang
+2. Set `OPENAI_AUTH_MODE=codex`
+3. Ensure `CODEX_AUTH_FILE` points at the generated auth file (default: `~/.codex/auth.json`)
+4. Set `ai_provider=openai-codex` in Settings
+
+To use Anthropic setup-token auth:
+
+1. Run `claude setup-token`
+2. Paste/export the token to `ANTHROPIC_AUTH_TOKEN`
+3. Keep `ai_provider=anthropic` in Settings
+
 ## Subscription plans vs API access (review)
 
 If your goal is to use a flat-rate "$20/month" consumer subscription (Claude Pro, ChatGPT Plus, Copilot) instead of pay-per-request API billing:
 
-- Those subscriptions are generally for first-party apps/websites, not direct API usage.
-- This project does not implement browser/session automation against consumer UIs.
-- OpenFang supports official Anthropic API access, plus custom Anthropic-compatible gateways via `ANTHROPIC_BASE_URL`.
+- Those subscriptions are generally for first-party apps/websites, not generic public API keys.
+- OpenFang does not use browser/session scraping automation.
+- OpenFang supports provider-auth-token flows (Anthropic setup-token, Codex auth file) and official API keys.
 
-For OpenClaw-like setups, run a compatible relay/gateway and point `ANTHROPIC_BASE_URL` to it. Ensure your setup complies with the provider's terms and account policies.
+For OpenClaw-like setups, you can also run a compatible relay/gateway and point `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` to it. Ensure your setup complies with provider terms and account policies.
 
 ## Web UI Development
 
@@ -115,7 +143,7 @@ pnpm start   # Runs compiled server (serves web UI as static files)
 Single Node.js process
 ├── Fastify API (REST + SSE)
 ├── Discord.js bot (DM handler)
-├── Anthropic-compatible LLM endpoint (tool-use loop)
+├── Anthropic/OpenAI provider integration (tool-use loop)
 ├── Scheduler (cron + reminders)
 ├── Memory (auto-extraction + FTS5)
 └── SQLite (Drizzle ORM)

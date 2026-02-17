@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { getDb } from "../../db/index.js";
 import { config } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
@@ -61,6 +62,17 @@ export function getEnabledToolDefinitions(): Anthropic.Tool[] {
   return allTools
     .filter((t) => enabled[t.name] !== false)
     .map((t) => t.tool);
+}
+
+export function getEnabledOpenAIToolDefinitions(): OpenAI.Chat.Completions.ChatCompletionTool[] {
+  return getEnabledToolDefinitions().map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.input_schema as Record<string, unknown>,
+    },
+  }));
 }
 
 export async function executeToolCall(

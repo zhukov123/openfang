@@ -1,7 +1,9 @@
 import { getAnthropicClient } from "../ai/anthropic.js";
+import { getOpenAIClient } from "../ai/openai.js";
 import { getDb } from "../db/index.js";
 import { config } from "../db/schema.js";
 import { eq } from "drizzle-orm";
+import { getAiProvider, getConfiguredModel } from "../ai/config.js";
 
 const EXTRACTION_PROMPT = `You are a memory extraction system. Given a conversation exchange, extract any NEW facts worth remembering long-term about the user or their projects/preferences.
 
@@ -49,7 +51,8 @@ export async function extractMemories(
     .from(config)
     .where(eq(config.key, "model"))
     .get();
-  const model = modelRow ? JSON.parse(modelRow.value) : "claude-sonnet-4-20250514";
+  const model = modelRow ? JSON.parse(modelRow.value) : getConfiguredModel();
+  const provider = getAiProvider();
 
   // Build a concise version of recent messages for extraction
   const recentMessages = conversationMessages.slice(-6);
@@ -58,21 +61,38 @@ export async function extractMemories(
     .join("\n");
 
   try {
-    const client = getAnthropicClient();
-    const response = await client.messages.create({
-      model,
-      max_tokens: 256,
-      system: EXTRACTION_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: `Extract memories from this exchange:\n\n${exchangeText}`,
-        },
-      ],
-    });
+    let text = "";
 
-    const text =
-      response.content[0]?.type === "text" ? response.content[0].text : "";
+    if (provider === "openai-codex") {
+      const client = getOpenAIClient();
+      const response = await client.chat.completions.create({
+        model,
+        max_completion_tokens: 256,
+        messages: [
+          { role: "system", content: EXTRACTION_PROMPT },
+          {
+            role: "user",
+            content: `Extract memories from this exchange:\n\n${exchangeText}`,
+          },
+        ],
+      });
+      text = response.choices[0]?.message?.content ?? "";
+    } else {
+      const client = getAnthropicClient();
+      const response = await client.messages.create({
+        model,
+        max_tokens: 256,
+        system: EXTRACTION_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: `Extract memories from this exchange:\n\n${exchangeText}`,
+          },
+        ],
+      });
+
+      text = response.content[0]?.type === "text" ? response.content[0].text : "";
+    }
 
     // Parse JSON from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);

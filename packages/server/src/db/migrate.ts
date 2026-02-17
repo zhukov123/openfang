@@ -110,10 +110,12 @@ export function seedDefaults(dbPath: string) {
   const sqlite = new Database(dbPath);
 
   const defaults: Record<string, string> = {
+    ai_provider: JSON.stringify("anthropic"),
     system_prompt: JSON.stringify(
       "You are OpenFang, a helpful personal AI assistant. You have persistent memory that stores facts from past conversations. Use the recall_memory tool when you think past context would help. You can search the web, run shell commands, and manage scheduled tasks. Be concise but thorough."
     ),
     model: JSON.stringify("claude-sonnet-4-20250514"),
+    openai_auth_mode: JSON.stringify("api_key"),
     max_context_messages: JSON.stringify(50),
     shell_working_directory: JSON.stringify(process.env.HOME ?? "/tmp"),
     shell_timeout_ms: JSON.stringify(30000),

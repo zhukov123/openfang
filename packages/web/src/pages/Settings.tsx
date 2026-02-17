@@ -38,6 +38,8 @@ export default function Settings() {
   }
 
   const toolsEnabled = (config.tools_enabled ?? {}) as Record<string, boolean>;
+  const aiProvider = (config.ai_provider as string) ?? "anthropic";
+  const openaiAuthMode = (config.openai_auth_mode as string) ?? "api_key";
 
   return (
     <div className="p-8 max-w-3xl">
@@ -68,6 +70,43 @@ export default function Settings() {
           />
         </Section>
 
+        {/* Provider */}
+        <Section title="AI Provider">
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-zinc-500 block mb-1">Provider</label>
+              <select
+                value={aiProvider}
+                onChange={(e) => updateField("ai_provider", e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              >
+                <option value="anthropic">anthropic</option>
+                <option value="openai-codex">openai-codex</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-500 block mb-1">
+                OpenAI Auth Mode
+              </label>
+              <select
+                value={openaiAuthMode}
+                onChange={(e) => updateField("openai_auth_mode", e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              >
+                <option value="api_key">api_key</option>
+                <option value="codex">codex</option>
+              </select>
+            </div>
+          </div>
+
+          <p className="text-xs text-zinc-500 mt-2">
+            Anthropic supports API key or setup-token via environment variables.
+            OpenAI Codex supports API key mode or Codex token mode (from
+            <code className="mx-1">codex login</code>).
+          </p>
+        </Section>
+
         {/* Model */}
         <Section title="AI Model">
           <input
@@ -75,10 +114,16 @@ export default function Settings() {
             value={(config.model as string) ?? ""}
             onChange={(e) => updateField("model", e.target.value)}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-            placeholder="claude-sonnet-4-20250514"
+            placeholder={
+              aiProvider === "openai-codex"
+                ? "gpt-5.3-codex"
+                : "claude-sonnet-4-20250514"
+            }
           />
           <p className="text-xs text-zinc-500 mt-1">
-            Anthropic-compatible model identifier
+            {aiProvider === "openai-codex"
+              ? "OpenAI model identifier"
+              : "Anthropic-compatible model identifier"}
           </p>
         </Section>
 

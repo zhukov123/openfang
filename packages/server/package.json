@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
+    "@fastify/cors": "latest",
+    "@fastify/static": "latest",
     "@mozilla/readability": "latest",
     "better-sqlite3": "latest",
     "cheerio": "latest",
@@ -20,11 +22,10 @@
     "dotenv": "latest",
     "drizzle-orm": "latest",
     "fastify": "latest",
-    "@fastify/cors": "latest",
-    "@fastify/static": "latest",
     "jsdom": "latest",
     "mathjs": "latest",
     "nanoid": "latest",
+    "openai": "^6.22.0",
     "zod": "latest"
   },
   "devDependencies": {
